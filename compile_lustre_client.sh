@@ -76,7 +76,7 @@ install_kernel() {
 
   echo_info "Installing kernel ${_KVER} ..."
   cd $_RPM_DIR
-  yum -y localinstall --skip-broken kernel*${ARCH}.rpm
+  yum -y localinstall --skip-broken kernel*${_ARCH}.rpm kernel*noarch.rpm
 }
 
 install_doca() {
@@ -85,14 +85,13 @@ install_doca() {
   local _DOCA_URI=${5:-https://linux.mellanox.com/public/repo/doca/}
   local _EL_MAJ_VER=${_EL_VER%.*} ; local _EL_MIN_VER=${_EL_VER#*.}
   local _EL_UNDERVER=${_EL_MAJ_VER}_${_EL_MIN_VER}
-  local _DOCA_DIR=${_WORK_DIR}/doca-${_DOCA_VER}
   if [ $_EL_MAJ_VER != $LOCAL_MAJ_VER ] ; then
     echo_warn "OS major version mismatch: Building kernel for $_EL_MAJ_VER on $LOCAL_MAJ_VER"
   fi
 
   echo_info "Installing doca ${_DOCA_VER} ..."
   cd $_WORK_DIR
-  get_uri ${_DOCA_URI}/${_DOCA_VER}/rhel${_EL_MAJ_VER}/x86_64/ ${_DOCA_DIR}
+  get_uri ${_DOCA_URI}/${_DOCA_VER}/rhel${_EL_MAJ_VER}/x86_64/ ${_RPM_DIR}
 
   cat <<EOF | sudo tee /etc/yum.repos.d/doca.repo || true
 [doca]
@@ -103,7 +102,6 @@ gpgcheck=0
 EOF
 
   yum -y install doca-ofed
-  mv -v ${_DOCA_DIR}/*.rpm ${_RPM_DIR}
 }
 
 create_ofa_dkms() {
@@ -212,6 +210,7 @@ fi
 mkdir -p $RPM_DIR
 
 install_dependencies $EL_VER $_ARCH
+echo "ARCH: $_ARCH"
 install_kernel $WORK_DIR $EL_VER $KERNEL_VER $_ARCH $RPM_DIR
 install_doca $WORK_DIR $EL_VER $DOCA_VER $RPM_DIR $DOCA_URL
 create_ofa_dkms $WORK_DIR $EL_VER $KERNEL_VER $_ARCH
