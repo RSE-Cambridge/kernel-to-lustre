@@ -22,14 +22,15 @@ kernel_regex = '''(kernel-)
 kernel_format_string = "{kernel[2]}.{kernel[4]}.{kernel[6]}-{kernel[8]}.{kernel[10]}.{kernel[12]}"
 el_format_string = "el{kernel[14]}_{kernel[16]}"
 
-def _get(*local_args, max_failures=10, **kwargs):
+def _get(*local_args, max_attempts=10, **kwargs):
     '''Wrapper on requests to handle API rate limiting.'''
     global args
     done = False
-    failures=0
+    attempts=0
     while not done:
         headers = {'Authorization': f'Bearer {args.access_token}'}
         r = requests.get(*local_args, **kwargs, headers=headers)
+        attempts += 1
         done = True
         if r.status_code in [200, 301, 302, 404]:
             return r
@@ -48,13 +49,14 @@ def _get(*local_args, max_failures=10, **kwargs):
         elif r.status_code == 500: #Server error
             done = False
             log.debug('Server error ...')
-            failures += 1
             time.sleep(1)
+        elif r.status_code == 504: #Gateway timeout
+            done = False
+            log.debug('Gateway time-out ...')
         else:
             log.warning(f'Unknown response: {r.status_code} {r.text}')
-            failures += 1
-        if failures >= max_failures:
-            log.debug('Max failures reached.')
+        if attempts >= max_attempts:
+            log.debug('Max attempts reached.')
             return None
     return r
 
@@ -104,33 +106,6 @@ def get_access_token(offline_token,token_url):
     if not token:
         raise RuntimeError('access_token call failed')
     return token
-
-def yield_errata(api_base,cases_yearly=20000,overlap=100,from_days=7,overlap_mult=8):
-    '''Calculate where to start scanning errata from, then return all errata ids that are real
-until you hit too many failures.'''
-    ret = []
-    now = datetime.now()
-    then_date = (now - timedelta(days=from_days))
-    last_date = then_date
-    then = then_date.timetuple()
-    case_number = int(cases_yearly*then.tm_yday/366)
-    false_count = 0
-    _overlap = overlap*overlap_mult
-    while false_count < _overlap:
-        case = f'RHSA-{then.tm_year}:{str(case_number).zfill(4)}'
-        if check_errata(case,api_base):
-            log.info(f'{case}')
-            yield case
-            last_date = get_errata_date(case)
-            if (now - last_date).days <= from_days:
-                _overlap = overlap
-            false_count = 0
-        else:
-            log.debug(f'{case} not found - last is {last_date}')
-            false_count += 1
-        if false_count % 10 == 0:
-            log.warning(f'Fail count: {false_count} - last found date is {last_date}')
-        case_number += 1
 
 def check_errata(errata_id, api_base):
     '''True if real, false if 404'''
@@ -252,12 +227,6 @@ if __name__ == '__main__':
     parser.add_argument('-t','--token', help='Offline token for API.', default=dl_path)
     dl_path = read_environ('ERRATA_DOWNLOAD_PATH',default='.',func=str)
     parser.add_argument('-p','--download_path', help='path to download kernels to.', default=dl_path)
-    e_per_y = read_environ('ERRATA_PER_YEAR',default=22000,func=int)
-    parser.add_argument('-Y','--errata_per_year', help='Approximate number of errata per year to estimate start point.', type=int, default=e_per_y)
-    overlap = read_environ('ERRATA_OVERLAP',default=100,func=int)
-    parser.add_argument('-L','--errata_overlap', help='How many errata to proceed beyond last known.', type=int, default=overlap)
-    overlap_mult = read_environ('ERRATA_OVERLAP_MULTIPLIER',default=8,func=int)
-    parser.add_argument('-X','--errata_overlap_multiplier', help='How many failed errata to multiply the cap by if more than CUTOFF to check.', type=int, default=overlap_mult)
     token_url = read_environ('ERRATA_TOKEN_URL',default='https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token',func=str)
     parser.add_argument('-T','--token_url', help='OAuth path to get active token from.', default=token_url)
     api_base = read_environ('ERRATA_API_BASE',default='https://api.access.redhat.com/management/v1',func=str)
