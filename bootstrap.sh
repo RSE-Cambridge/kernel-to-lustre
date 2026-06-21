@@ -9,4 +9,6 @@ KVER=${KERNEL_VER}.el${EL_UNDERVER}
 
 yum -y install nano wget
 mkdir $RPM_DIR
+if ! wget -N -O $RPM_DIR/kernel-$KVER.src.rpm https://dl.rockylinux.org/pub/rocky/${EL_VER}/BaseOS/source/tree/Packages/k/kernel-$KVER.src.rpm ; then
 wget -N -O $RPM_DIR/kernel-$KVER.src.rpm https://dl.rockylinux.org/vault/rocky/${EL_VER}/BaseOS/source/tree/Packages/k/kernel-$KVER.src.rpm
+fi
