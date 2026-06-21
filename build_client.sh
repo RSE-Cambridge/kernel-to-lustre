@@ -12,6 +12,6 @@ KVER=${KERNEL_VER}.el9_7
 mkdir $WORK_DIR
 mkdir $RPM_DIR
 
-$SCRIPT_DIR/bootstrap.sh $KVER $RPM_DIR
+$SCRIPT_DIR/bootstrap.sh $KERNEL_VER $EL_VER $RPM_DIR
 $SCRIPT_DIR/compile_kernel.sh $KVER $RPM_DIR
 $SCRIPT_DIR/compile_lustre_client.sh -w $WORK_DIR -r $RPM_DIR -l $LUSTRE_VER -k $KERNEL_VER -d $DOCA_VER -e $EL_VER
