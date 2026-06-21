@@ -3,7 +3,7 @@ SCRIPT_DIR=$(dirname $(readlink -f $0))
 
 EL_VER=9.4
 KERNEL_VER=5.14.0-427.31.1
-LUSTRE_VER=2.17.0
+LUSTRE_VER=2.16.1
 DOCA_VER=3.2.1
 RPM_DIR=/src/rpms
 WORK_DIR=/work
