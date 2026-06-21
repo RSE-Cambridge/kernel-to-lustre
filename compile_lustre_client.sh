@@ -60,7 +60,7 @@ get_uri() {
   local _URI=$1
   local _DEST=$2
   echo_info "Wgetting $_URI to $_DEST ..."
-  wget -r -N -np -nd -R "*.htm*,*.xml*,*.asc*,*.gz,*.bz2,*.txt" --directory-prefix=${_DEST} ${_URI}/
+  wget -r -N -np -nd -R "*.htm*,*.xml*,*.asc*,*.gz,*.bz2,*.pub,*.txt" --directory-prefix=${_DEST} ${_URI}/
 }
 
 install_kernel() {
