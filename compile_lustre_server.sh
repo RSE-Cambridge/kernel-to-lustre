@@ -163,10 +163,10 @@ local _KVER=${_KERNEL_VER}.el${_EL_UNDERVER}
 
   if [ $LOCAL_MAJ_VER -eq 8 ] ; then
     KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}
-    OFED_SRC_DIR=/usr/src/ofa_kernel/$_ARCH}/${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}/
+    OFED_SRC_DIR=/usr/src/ofa_kernel/${_ARCH}/${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}/
   else
     KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}
-    OFED_SRC_DIR=/usr/src/ofa_kernel/$_ARCH}/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}/
+    OFED_SRC_DIR=/usr/src/ofa_kernel/${_ARCH}/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}/
   fi
 
   cd $_WORK_DIR/lustre-release
