@@ -105,11 +105,6 @@ local _KVER=${_KERNEL_VER}.el${_EL_UNDERVER}
   if [ $_EL_MAJ_VER != $LOCAL_MAJ_VER ] ; then
     echo_warn "OS major version mismatch: Building kernel for $_EL_MAJ_VER on $LOCAL_MAJ_VER"
   fi
-  if [ $LOCAL_MAJ_VER -eq 8 ] ; then
-    KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}
-  else
-    KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}
-  fi
   cd $_WORK_DIR
   if [ -d kernel ] ; then mv kernel kernel-$(date +%s) ; fi
   mkdir -p $_WORK_DIR/kernel/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
@@ -119,7 +114,7 @@ local _KVER=${_KERNEL_VER}.el${_EL_UNDERVER}
   cd $_WORK_DIR/kernel/rpmbuild/
   echo_info 'Prepping ...'
   rpmbuild -bp --target=${_ARCH} ./SPECS/kernel.spec
-    cp $_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME}/configs/kernel-${_KERNEL_MIN_VER}-${_ARCH}.config $_WORK_DIR/lustre-release/lustre/kernel_patches/kernel_configs/kernel-${_KERNEL_MIN_VER}-${_KERNEL_MAJ_VER}-rhel${_EL_VER}-${_ARCH}.config
+    cp $_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${_KVER}/linux-${_KERNEL_VER}.el${_EL_MAJ_VER}.${_ARCH}/configs/kernel-${_KERNEL_MIN_VER}-${_ARCH}.config $_WORK_DIR/lustre-release/lustre/kernel_patches/kernel_configs/kernel-${_KERNEL_MIN_VER}-${_KERNEL_MAJ_VER}-rhel${_EL_VER}-${_ARCH}.config
   echo_info 'Prepping done'
   sed -i '/# IO Schedulers/a CONFIG_IOSCHED_DEADLINE=y\nCONFIG_DEFAULT_IOSCHED="deadline"' $_WORK_DIR/lustre-release/lustre/kernel_patches/kernel_configs/kernel-${_KERNEL_MIN_VER}-${_KERNEL_MAJ_VER}-rhel${_EL_VER}-${_ARCH}.config
   echo '' > $_WORK_DIR/kernel/rpmbuild/SOURCES/patch-${_KERNEL_MIN_VER}-lustre.patch
@@ -145,8 +140,6 @@ echo "# ${_ARCH}" > $_WORK_DIR/kernel/rpmbuild/SOURCES/kernel-${_KERNEL_MIN_VER}
 
   echo_info 'Installing kernel for Lustre build ...'
   KPATHS=''
-  export KERNEL_SRC_DIR=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME}
-  echo_info "KERNEL_SRC_DIR is $KERNEL_SRC_DIR"
   if [ $LOCAL_MAJ_VER -eq 8 ] ; then
     for package in kernel kernel-core kernel-devel kernel-modules ; do
       KPATHS="$_RPM_DIR/$package-${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}.rpm $KPATHS"
