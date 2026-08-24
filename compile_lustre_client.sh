@@ -123,6 +123,7 @@ create_ofa_dkms() {
 compile_lustre() {
   local _WORK_DIR=$1 ; local _EL_VER=$2 ; local _KERNEL_VER=$3 ; local _ARCH=$4
   local _RPM_DIR=${5:-/rpms}
+  local _OFA_DIR=$6
   local _EL_MAJ_VER=${_EL_VER%.*} ; local _EL_MIN_VER=${_EL_VER#*.}
   local _EL_UNDERVER=${_EL_MAJ_VER}_${_EL_MIN_VER}
   local _KERNEL_MIN_VER=${_KERNEL_VER%-*} ; local _KERNEL_MAJ_VER=${_KERNEL_MIN_VER%.*}
@@ -134,14 +135,18 @@ compile_lustre() {
   echo_info "Compiling lustre ..."
   cd ${WORK_DIR}/lustre-release
   sh autogen.sh
-  ./configure --disable-server --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH} --with-o2ib=/usr/src/ofa_kernel/default
+  if [ -n "$_OFA_DIR" ] ; then
+    ./configure --disable-server --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH} --with-o2ib=$_OFA_DIR
+  else
+    ./configure --disable-server --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH}
+  fi
   make rpms dkms-rpms
   cp -rv *.rpm ${_RPM_DIR}
 }
 
 function usage () {
 echo "Usage: $0 -r <RPM_output_dir> -w <working_dir>"
-echo "          -l <lustre_version> -d <doca_version>"
+echo "          -l <lustre_version> [-d <doca_version>]"
 echo "          -k <kernel_version>"
 echo "          -e <EL_version>"
 exit 255
@@ -202,7 +207,7 @@ done
 echo "-w $WORK_DIR -r $RPM_DIR -l $LUSTRE_VER -k $KERNEL_VER -d $DOCA_VER -e $EL_VER -a $_ARCH"
 
 if [ -z "$WORK_DIR" ] || [ -z "$RPM_DIR" ] || [ -z "$LUSTRE_VER" ] || [ -z "$KERNEL_VER" ] || \
-   [ -z "$DOCA_VER" ] || [ -z "$EL_VER" ] || [ -z "$_ARCH" ] ; then
+   [ -z "$EL_VER" ] || [ -z "$_ARCH" ] ; then
   usage
   exit 255
 fi
@@ -212,7 +217,10 @@ mkdir -p $RPM_DIR
 install_dependencies $EL_VER $_ARCH
 echo "ARCH: $_ARCH"
 install_kernel $WORK_DIR $EL_VER $KERNEL_VER $_ARCH $RPM_DIR
-install_doca $WORK_DIR $EL_VER $DOCA_VER $RPM_DIR $DOCA_URL
-create_ofa_dkms $WORK_DIR $EL_VER $KERNEL_VER $_ARCH
+if [ -n "$DOCA_VER" ] ; then
+  install_doca $WORK_DIR $EL_VER $DOCA_VER $RPM_DIR $DOCA_URL
+  create_ofa_dkms $WORK_DIR $EL_VER $KERNEL_VER $_ARCH
+  OFA_DIR="/usr/src/ofa_kernel/default"
+fi
 clone_lustre_source $WORK_DIR $LUSTRE_VER $LUSTRE_URL
-compile_lustre $WORK_DIR $EL_VER $KERNEL_VER $_ARCH $RPM_DIR
+compile_lustre $WORK_DIR $EL_VER $KERNEL_VER $_ARCH $RPM_DIR $OFA_DIR

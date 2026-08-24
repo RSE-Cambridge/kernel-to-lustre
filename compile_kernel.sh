@@ -1,8 +1,13 @@
 #!/bin/bash
 set -eo pipefail
-KVER=$1
-RPM_DIR=${2:-/rpms}
-EL_VER=${KVER##*.}
+KERNEL_VER=$1
+EL_VER=$2
+
+EL_MAJ_VER=${EL_VER%.*} ; EL_MIN_VER=${EL_VER#*.}
+EL_UNDERVER=${EL_MAJ_VER}_${EL_MIN_VER}
+KVER=${KERNEL_VER}.el${EL_UNDERVER}
+
+RPM_DIR=${3:-/rpms}
 . /etc/os-release
 MY_MAJ_VER=${REDHAT_SUPPORT_PRODUCT_VERSION%%.*}
 SPACE_NEEDED=15000
@@ -23,9 +28,9 @@ if [ $(df -BMiB --output=avail $HOME | tail -n 1 | sed 's/MiB//') -gt $SPACE_NEE
   for x in $(rpmbuild -bb --target=noarch --nobuild $HOME/rpmbuild/SPECS/kernel.spec 2>&1 | grep 'is needed' | cut -d ' ' -f 1) ; do yum -y install $x ; done
 
   export KVER
-  rpmbuild -bb --clean --target=x86_64 --define="dist .$EL_VER" --without=cross_headers --without=selftests --without=kabichk --without=debuginfo --without=debug --without=realtime $HOME/rpmbuild/SPECS/kernel.spec
+  rpmbuild -bb --clean --target=x86_64 --define="dist .el$EL_UNDERVER" --without=cross_headers --without=selftests --without=kabichk --without=debuginfo --without=debug --without=realtime $HOME/rpmbuild/SPECS/kernel.spec
   mv $HOME/rpmbuild/RPMS/x86_64/* $RPM_DIR/
-  rpmbuild -bb --clean --target noarch --define="dist .$EL_VER" --with=abi_stablelists $HOME/rpmbuild/SPECS/kernel.spec
+  rpmbuild -bb --clean --target noarch --define="dist .el$EL_UNDERVER" --with=abi_stablelists $HOME/rpmbuild/SPECS/kernel.spec
   mv $HOME/rpmbuild/RPMS/noarch/* $RPM_DIR/
 else
   echo "Not enough space to compile."
