@@ -145,11 +145,14 @@ Filter by age.'''
                 id = o['advisoryId']
                 if 'RHSA' in id:
                     erratas.add(id)
+    dated_errata = {}
     for errata in erratas:
-       last_date = get_errata_date(errata)
-       if (now - last_date).days <= from_days:
+       errata_date = get_errata_date(errata)
+       if (now - errata_date).days <= from_days:
            log.info(f'Selected: {errata}')
-           yield errata
+           dated_errata[errata_date] = errata
+    for date in sorted(list(dated_errata.keys()),reverse=True):
+       yield dated_errata[date]
 
 def get_errata_date(errata_id):
     '''Returns the most recent date an errata was published'''
@@ -171,11 +174,11 @@ def yield_errata_source_packages(errata_id, api_base,maj_el_ver=None,min_el_ver=
         if 'arch' in pkg and pkg['arch'] == 'src' and re.match('kernel-[0-9]',pkg['filename']):
             if maj_el_ver != None:
                 if f'.el{maj_el_ver}' not in pkg['filename']:
-                    log.debug('Major version for {pkg["filename"]} not .el{maj_el_ver}')
+                    log.debug('fMajor version for {pkg["filename"]} not .el{maj_el_ver}')
                     continue
                 if min_el_ver != None:
                     if f'.el{maj_el_ver}_{min_el_ver}' not in pkg['filename']:
-                        log.info('Minor version for {pkg["filename"]} not .el{maj_el_ver}_{min_el_ver}')
+                        log.info(f'Minor version for {pkg["filename"]} not .el{maj_el_ver}_{min_el_ver}')
                         continue
             yield pkg['filename'], pkg['checksum']
 
@@ -217,7 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('-m','--minor_kernel_version', help='minor kernel version to search.', type=int, choices=range(0,20))
     arch = read_environ('ERRATA_ARCH',default='x86_64')
     parser.add_argument('-a','--arch', help='architecture to select packages from', default=arch)
-    cutoff = read_environ('ERRATA_CUTOFF',default=7,func=int)
+    cutoff = read_environ('ERRATA_CUTOFF',default=90,func=int)
     parser.add_argument('-c','--cutoff', help='cutoff in days to download in the past.', type=int, default=cutoff)
     force = read_environ('ERRATA_NO_DOWNLOAD',default=False,func=str2bool)
     parser.add_argument('-d','--no-download', help="Don't download files", action='store_true',default=force)
@@ -225,6 +228,8 @@ if __name__ == '__main__':
     parser.add_argument('-f','--force', help='Overwrite existing files', action='store_true',default=force)
     dl_path = read_environ('ERRATA_TOKEN',func=str)
     parser.add_argument('-t','--token', help='Offline token for API.', default=dl_path)
+    first_only = read_environ('ERRATA_FIRST_ONLY',default=True,func=str2bool)
+    parser.add_argument('-1','--first-only', help='Return the first kernel only.', action='store_true',default=first_only)
     dl_path = read_environ('ERRATA_DOWNLOAD_PATH',default='.',func=str)
     parser.add_argument('-p','--download_path', help='path to download kernels to.', default=dl_path)
     token_url = read_environ('ERRATA_TOKEN_URL',default='https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token',func=str)
@@ -244,7 +249,10 @@ if __name__ == '__main__':
     for errata in yield_errata_from_contentsets(api_base=args.api_base,maj_el_ver=args.kernel_version,arch=args.arch,from_days=args.cutoff,enabled_only=False):
         for f in yield_errata_source_packages(errata,maj_el_ver=args.kernel_version,min_el_ver=args.minor_kernel_version,api_base=args.api_base):
             log.info(f'Identified {f}')
-            if not args.no_download:
-                fetch_package(f[0],f[1],'.',api_base=args.api_base,force=args.force)
-            else:
+            if args.no_download:
                 log.warn(f'Not downloading {f} as requested.')
+            else:
+                fetch_package(f[0],f[1],'.',api_base=args.api_base,force=args.force)
+            if args.first_only:
+                exit()
+
