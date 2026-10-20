@@ -14,7 +14,7 @@ local _E2FS_DASHVER=${_E2FS_VER%.*}-${_E2FS_VER##*.}
   if [ $_EL_MAJ_VER != $LOCAL_MAJ_VER ] ; then
     echo_warn "OS major version mismatch: Installing dependencies for $_EL_MAJ_VER on $LOCAL_MAJ_VER"
   fi
-  yum -y update --exclude 'kernel*'
+  yum -y update --skip-broken --nobest --exclude 'kernel*'
   yum -y install 'dnf-command(config-manager)'
   if [ $LOCAL_MAJ_VER -eq 8 ] ; then
     yum config-manager --set-enabled powertools
@@ -27,8 +27,10 @@ local _E2FS_DASHVER=${_E2FS_VER%.*}-${_E2FS_VER##*.}
   yum -y install gcc autoconf libtool which wget make patch diffutils file binutils-devel python3-devel elfutils-devel libselinux-devel libaio-devel dnf-plugins-core bc bison flex git nano screen libyaml-devel libnl3-devel libmount-devel json-c-devel
   if [ $LOCAL_MAJ_VER -eq 8 ] ; then
     yum -y install python38 redhat-lsb python2 kernel-abi-whitelists
-  else
+  elif [ $LOCAL_MAJ_VER -eq 9 ] ; then
     yum -y install python3 WALinuxAgent-cvm dracut centos-sb-certs gcc-plugin-devel glibc-static hmaccalc lvm2 system-sb-certs systemd-boot-unsigned tpm2-tools keyutils-libs-devel kernel-abi-stablelists systemd-ukify
+  else
+    yum -y --skip-broken install python3 dracut centos-sb-certs gcc-plugin-devel glibc-static hmaccalc lvm2 system-sb-certs systemd-boot-unsigned tpm2-tools keyutils-libs-devel kernel-abi-stablelists systemd-ukify fuse-devel libtracefs-devel libxml2-devel llvm-devel python3-wheel swig dosfstools python3-jsonschema python3-pyyaml python3-setuptools xfsprogs checkpolicy policycoreutils
   fi
   yum clean packages
   yum -y install libssh-devel libattr-devel libtirpc-devel libblkid-devel openssl-devel libuuid-devel texinfo texinfo-tex audit-libs-devel binutils-devel elfutils-devel kabi-dw ncurses-devel newt-devel numactl-devel openssl-devel pciutils-devel perl
@@ -161,17 +163,23 @@ local _EL_UNDERVER=${_EL_MAJ_VER}_${_EL_MIN_VER}
 local _KERNEL_MIN_VER=${_KERNEL_VER%-*} ; local _KERNEL_MAJ_VER=${_KERNEL_MIN_VER%.*}
 local _KVER=${_KERNEL_VER}.el${_EL_UNDERVER}
 
+  cd $_WORK_DIR/lustre-release
   if [ $LOCAL_MAJ_VER -eq 8 ] ; then
     KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}
     OFED_SRC_DIR=/usr/src/ofa_kernel/${_ARCH}/${_KERNEL_VER}.el${_EL_MAJ_VER}_lustre.${_ARCH}/
-  else
+    echo ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
+    ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
+  elif [ $LOCAL_MAJ_VER -eq 9 ] ; then
     KERNEL_NAME=${_KVER}/linux-${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}
     OFED_SRC_DIR=/usr/src/ofa_kernel/${_ARCH}/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}/
+    echo ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
+    ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
+  else
+    OFED_SRC_DIR=/usr/src/ofa_kernel/${_ARCH}/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH}/
+    echo ./configure --with-linux=/usr/src/kernels/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH} --enable-server --with-o2ib=$OFED_SRC_DIR
+    ./configure --with-linux=/usr/src/kernels/${_KERNEL_VER}_lustre.el${_EL_MAJ_VER}.${_ARCH} --enable-server --with-o2ib=$OFED_SRC_DIR
   fi
 
-  cd $_WORK_DIR/lustre-release
-  echo ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
-  ./configure --with-linux=$_WORK_DIR/kernel/rpmbuild/BUILD/kernel-${KERNEL_NAME} --enable-server --with-o2ib=$OFED_SRC_DIR
   make rpms
   cp -v $_WORK_DIR/lustre-release/*.rpm $_RPM_DIR
 }
