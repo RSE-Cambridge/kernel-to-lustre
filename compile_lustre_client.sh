@@ -136,7 +136,7 @@ compile_lustre() {
   cd ${WORK_DIR}/lustre-release
   sh autogen.sh
   if [ -n "$_OFA_DIR" ] ; then
-    ./configure --disable-server --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH} --with-o2ib=$_OFA_DIR
+    ./configure --disable-server --disable-tests --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH} --with-o2ib=$_OFA_DIR
   else
     ./configure --disable-server --enable-client --with-linux=/usr/src/kernels/${_KVER}.${_ARCH}
   fi
